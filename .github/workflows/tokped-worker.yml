@@ -1,0 +1,49 @@
+name: Tokopedia Stock Watch
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright
+
+      - name: Install deps
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Restore last status cache
+        id: cache-last
+        uses: actions/cache@v4
+        with:
+          path: last_status.txt
+          key: laststatus-${{ github.run_id }}
+          restore-keys: |
+            laststatus-
+
+      - name: Run watcher
+        env:
+          TOKO_URL: ${{ secrets.TOKO_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python tokped_worker.py
+
+      - name: Save last status
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: last_status.txt
+          key: laststatus-${{ github.run_id }}
