@@ -30,7 +30,7 @@ jobs:
           
       - name: Install Playwright browsers & OS deps
         run: |
-          python -m playwright install chromium
+          python -m playwright install firefox
           python -m playwright install-deps
           
       - name: Restore last status cache
