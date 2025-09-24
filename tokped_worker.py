@@ -107,7 +107,11 @@ def main():
         )
         page = ctx.new_page()
         for url in urls:
-            status = check_stock(page, url)
+            try:
+                status = check_stock(page, url)
+            except Exception as e:
+                print(f"Error while processing URL: {url} -> {e}")
+                continue
             last = read_last(url)
             if status != last:
                 write_last(url, status)
