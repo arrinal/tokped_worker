@@ -35,7 +35,7 @@ jobs:
         id: cache-last
         uses: actions/cache@v4
         with:
-          path: last_status.txt
+          path: last_status
           key: laststatus-${{ github.run_id }}
           restore-keys: |
             laststatus-
@@ -51,5 +51,5 @@ jobs:
         if: always()
         uses: actions/cache/save@v4
         with:
-          path: last_status.txt
+          path: last_status
           key: laststatus-${{ github.run_id }}
