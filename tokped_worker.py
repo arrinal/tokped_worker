@@ -50,62 +50,42 @@ def parse_urls(raw: str):
     return parts
 
 def check_stock(page, url: str) -> str:
-    use_page = page
-    temp_page = None
-    max_attempts = 5
-    for attempt in range(max_attempts):
+    for attempt in range(3):
         try:
-            use_page.goto(url, wait_until="domcontentloaded", timeout=60000)
+            page.goto(url, wait_until="domcontentloaded", timeout=60000)
             break
         except Exception as e:
-            if attempt == max_attempts - 1:
-                print(f"Navigation failed for {url}: {e}")
-                if temp_page:
-                    try:
-                        temp_page.close()
-                    except Exception:
-                        pass
-                return "UNKNOWN"
-            time.sleep(min(10, 2 * (attempt + 1)))
-            try:
-                if temp_page:
-                    temp_page.close()
-                temp_page = page.context.new_page()
-                use_page = temp_page
-            except Exception:
-                use_page = page
+            if attempt == 2:
+                raise
+            time.sleep(2)
 
-    use_page.wait_for_timeout(2500)
-    html = use_page.content().lower()
+    page.wait_for_timeout(2500)
+    html = page.content().lower()
 
     def contains(patterns): return any(p in html for p in patterns)
 
-    status = "UNKNOWN"
     if contains(["ingatkan saya", "stok habis", ">habis<"]):
-        status = "SOLD_OUT"
-    else:
-        buy_keywords = [
-            "beli langsung",
-            "masukkan keranjang",
-            "add to cart",
-            "add to bag"
-        ]
-        if contains(buy_keywords):
-            status = "IN_STOCK"
-        else:
-            m = re.search(r'"stock"\s*:\s*(\d+)', html)
-            if m and int(m.group(1)) > 0:
-                status = "IN_STOCK"
-            else:
-                if contains(['aria-disabled="true"', "disabled"]):
-                    status = "SOLD_OUT"
+        return "SOLD_OUT"
 
-    if temp_page:
-        try:
-            temp_page.close()
-        except Exception:
-            pass
-    return status
+    buy_keywords = [
+        "beli langsung",
+        "masukkan keranjang",
+        "add to cart",
+        "add to bag"
+    ]
+    if contains(buy_keywords):
+        return "IN_STOCK"
+
+    # Coba sniff angka stok di JSON inline
+    m = re.search(r'"stock"\s*:\s*(\d+)', html)
+    if m and int(m.group(1)) > 0:
+        return "IN_STOCK"
+
+    # Tombol disabled → kemungkinan habis
+    if contains(['aria-disabled="true"', "disabled"]):
+        return "SOLD_OUT"
+
+    return "UNKNOWN"
 
 def main():
     if not URL:
